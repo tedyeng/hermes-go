@@ -1,8 +1,9 @@
-# 🚄 Hermes Go (日本鐵道 & 台灣公車即時運行狀態查詢工具)
+# 🚄 Hermes Go (日本鐵道 & 台灣公車與 YouBike 即時資訊查詢工具)
 
-此專案包含兩個精美、高效能的終端機 CLI 工具：
+此專案包含三個精美、高效能的終端機 CLI 工具：
 1. **jptrain** 🚄：查詢日本各地區鐵路、地鐵、新幹線的即時延誤、停駛與營運概況，自動獲取 Yahoo! 路線情報並智慧翻譯為繁體中文。
 2. **twbus** 🚌：串接台灣 TDX 運輸資料流通服務，提供離線/快取優化的附近公車即時 ETA、特定路線到站時間、以及目的地直達公車路線規劃。
+3. **ubike** 🚲：串接台灣 TDX 運輸資料流通服務，輸入 GPS 座標、度分秒 DMS、或地圖連結（Google Maps）即可查詢 200m 內 YouBike 站點，顯示車輛與空位數，並提供地圖連結。
 
 ---
 
@@ -150,12 +151,49 @@ uv run twbus eta --lat 25.0338 --lon 121.5298 --route "307"
 uv run twbus eta --lat "北緯25°5′0″" --lon "東經121°34′43″" --route "307"
 ```
 
+---
 
+## 🚲 ubike 使用方法 (台灣 YouBike 即時車況 CLI)
+
+`ubike` 工具專為行動裝置終端機最佳化，**預設採用 38 欄寬度的直式排版**，非常適合在手機（如 Termius）或 Telegram 中使用。
+
+與 `twbus` 相同，在使用前需於 `.env` 中設定 TDX 的 `TDX_CLIENT_ID` 與 `TDX_CLIENT_SECRET`。
+
+### 1. 查詢附近 YouBike 站點即時狀態
+直接傳入您複製的 GPS 資訊，支援多種輸入格式：
+- **經緯度數值**（如 `"25.02605, 121.5436"`）
+- **度分秒 DMS 格式**（如 `"北緯25°01'33.8\" 東經121°32'37.0\""`）
+- **Google 地圖網址**（支援一般網址與手機分享之 `maps.app.goo.gl` 短網址）
+
+```bash
+# 輸入經緯度數值
+uv run ubike nearby "25.02605, 121.5436"
+
+# 輸入度分秒 DMS 格式
+uv run ubike nearby "北緯25°01'33.8\" 東經121°32'37.0\""
+```
+
+### 2. 透過選項查詢附近站點
+若想手動輸入緯度、經度與設定搜尋半徑 (radius)，亦可使用選項：
+```bash
+uv run ubike nearby --lat 25.0260 --lon 121.5436 --radius 200
+```
+
+### 3. 清除本地 YouBike 快取資料
+```bash
+uv run ubike clean
+```
+
+---
 
 ## 🧪 單元測試
 
 本專案使用 `pytest` 進行單元測試。
 
+* **執行所有單元測試**：
+  ```bash
+  uv run python -m pytest
+  ```
 * **執行日本鐵道查詢測試**：
   ```bash
   PYTHONPATH=src uv run python -m pytest tests/test_api.py tests/test_cache.py
@@ -164,12 +202,16 @@ uv run twbus eta --lat "北緯25°5′0″" --lon "東經121°34′43″" --rout
   ```bash
   PYTHONPATH=src uv run python -m pytest tests/test_twbus.py
   ```
+* **執行 YouBike 查詢與 GPS 連結解析測試**：
+  ```bash
+  PYTHONPATH=src uv run python -m pytest tests/test_ubike.py
+  ```
 
 ---
 
 本專案之鐵路運行狀態與公車到站數據完全對接公開即時數據源：
 * **[Yahoo!路線情報 - 運行情報](https://transit.yahoo.co.jp/diainfo)**：日本全國 8 大區域鐵路、新幹線與地鐵之營運概況。
-* **[TDX 運輸資料流通服務平臺](https://tdx.transportdata.tw/)**：台灣各地市區公車之站牌、路線站序、及預估到站時間（ETA）。
+* **[TDX 運輸資料流通服務平臺](https://tdx.transportdata.tw/)**：台灣各地市區公車之站牌、路線站序、及預估到站時間（ETA），以及全台 YouBike 站點靜態資訊與即時車位資料。
 * **[OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/)**：目的地名稱與地址之經緯度座標解析（Geocoding）。
 
 ---
@@ -185,7 +227,11 @@ uv run twbus eta --lat "北緯25°5′0″" --lon "東經121°34′43″" --rout
   * `api.py`：TDX 授權、附近的站牌、公車路線/站序匹配及 ETA 查詢模組。
   * `cache.py`：管理 TDX 存取 Token 與縣市公車路線站序之本地 SQLite 快取。
   * `cli.py`：手機最佳化 (38 欄寬直式排版) 之 CLI 控制器入口。
+* `src/ubike/`：台灣公共自行車即時車況主程式源碼。
+  * `api.py`：YouBike API 與 GPS 格式/連結解析模組。
+  * `cache.py`：管理 TDX Access Token 快取。
+  * `cli.py`：手機最佳化之 YouBike CLI 控制器。
 * `tests/`：Pytest 單元測試腳本目錄。
   * `test_api.py` / `test_cache.py`：日本鐵道核心功能 Mock 測試。
   * `test_twbus.py`：驗證 TDX 登入、地址解析、附近站牌及公車路線匹配。
-
+  * `test_ubike.py`：驗證 YouBike API 與 GPS 格式/連結解析。
