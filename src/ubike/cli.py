@@ -185,8 +185,9 @@ def nearby(location, lat, lon, radius):
         console.print(f"• 可借: [bold cyan]{rentable}[/bold cyan] | 空位: [bold yellow]{returnable}[/bold yellow]")
         console.print(f"• 地址: [dim]{address}[/dim]")
         console.print(f"• 更新: {update_time}")
-        console.print(f"• 地圖: {gmaps_url}")
+        console.print(f"• 地圖: {gmaps_url}", soft_wrap=True)
         console.print("─" * 36)
+
 
 @cli.command()
 def clean():

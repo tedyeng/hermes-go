@@ -153,8 +153,9 @@ def nearby(location, lat, lon, radius, type_param, language):
         if friendly_types:
             console.print(f"• 類型: {', '.join(friendly_types[:3])}")
         console.print(f"• 地址: [dim]{address}[/dim]")
-        console.print(f"• 地圖: {gmaps_url}")
+        console.print(f"• 地圖: {gmaps_url}", soft_wrap=True)
         console.print("─" * 36)
+
 
 if __name__ == "__main__":
     cli()
