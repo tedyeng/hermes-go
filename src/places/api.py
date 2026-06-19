@@ -9,9 +9,6 @@ from typing import List, Dict, Any, Optional, Tuple
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
-for env_path in [os.path.expanduser("~/.env"), "/opt/data/.env"]:
-    if os.path.exists(env_path):
-        load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger("places.api")
 
@@ -201,9 +198,7 @@ def parse_gps_input(text: str) -> Optional[Tuple[float, float]]:
             lon = float(lon_str)
             
             # Universal global swapping check:
-            # If lat is not in [-90, 90] but lon is, and lat is in [-180, 180]
-            if not (-90 <= lat <= 90) and (-180 <= lat <= 180) and (-90 <= lon <= 90):
-                lat, lon = lon, lat
+            lat, lon = _swap_if_needed(lat, lon)
                 
             if -90 <= lat <= 90 and -180 <= lon <= 180:
                 return lat, lon
@@ -215,11 +210,17 @@ def parse_gps_input(text: str) -> Optional[Tuple[float, float]]:
     if res:
         # Check global swap for fallback coordinate result too
         lat, lon = res
-        if not (-90 <= lat <= 90) and (-180 <= lat <= 180) and (-90 <= lon <= 90):
-            lat, lon = lon, lat
+        lat, lon = _swap_if_needed(lat, lon)
         return lat, lon
 
     return None
+
+def _swap_if_needed(lat: float, lon: float) -> Tuple[float, float]:
+    """Swap lat/lon if they appear reversed globally."""
+    if not (-90 <= lat <= 90) and (-180 <= lat <= 180) and (-90 <= lon <= 90):
+        return lon, lat
+    return lat, lon
+
 
 def _raw_query_places(api_key: str, lat: float, lon: float, radius: int, place_type: Optional[str] = None, language: str = "zh-TW") -> List[Dict[str, Any]]:
     """Helper to query the Google Places API for a single type."""
@@ -275,13 +276,7 @@ def get_nearby_places(api_key: str, lat: float, lon: float, radius: int = 500, t
         attractions = _raw_query_places(api_key, lat, lon, radius, "tourist_attraction", language)
         
         # Merge and deduplicate by place_id
-        seen = set()
-        merged = []
-        for p in restaurants + attractions:
-            pid = p.get("place_id")
-            if pid and pid not in seen:
-                seen.add(pid)
-                merged.append(p)
-        return merged
+        merged = {p.get("place_id"): p for p in restaurants + attractions if p.get("place_id")}
+        return list(merged.values())
     else:
         return _raw_query_places(api_key, lat, lon, radius, mapped_type, language)
