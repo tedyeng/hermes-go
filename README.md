@@ -1,25 +1,15 @@
-# 🚄 Hermes Go (日本鐵道 & 台灣公車與 YouBike 即時資訊查詢工具)
+# 🚄 Hermes Go (日本鐵道、台灣公車/YouBike & 全球觀光美食即時資訊 CLI 工具)
 
-此專案包含三個精美、高效能的終端機 CLI 工具：
-1. **jptrain** 🚄：查詢日本各地區鐵路、地鐵、新幹線的即時延誤、停駛與營運概況，自動獲取 Yahoo! 路線情報並智慧翻譯為繁體中文。
-2. **twbus** 🚌：串接台灣 TDX 運輸資料流通服務，提供離線/快取優化的附近公車即時 ETA、特定路線到站時間、以及目的地直達公車路線規劃。
-3. **ubike** 🚲：串接台灣 TDX 運輸資料流通服務，輸入 GPS 座標、度分秒 DMS、或地圖連結（Google Maps）即可查詢 200m 內 YouBike 站點，顯示車輛與空位數，並提供地圖連結。
+此專案是一個精美、高效能且針對行動裝置終端機最佳化的交通與景點查詢工具箱。它包含了四個獨立的 Python 終端機 CLI 工具：
 
----
-
-## 🌟 核心特色
-
-* **🚄 日本鐵道與地鐵全覆蓋**：整合 Yahoo! 路線情報，覆蓋日本全國所有新幹線、JR、私鐵、都營及市營地下鐵、單軌電車與路面電車。
-* **⚡ 智慧詳情自動補全**：對於任何出現「列車延誤」、「暫停營運」等異常狀況的路線，程式會自動在背景請求其專屬詳細資訊頁面，抓取完整、未被截斷的延誤說明，免去手動查詢的繁瑣。
-* **🌐 繁體中文智慧翻譯**：自動將日文鐵道術語（如 *平常運転*、*列車遅延*、*運転見合わせ*、*運転計画* 等）以及各鐵道公司、路線名稱和詳細說明翻譯為繁體中文，讓旅客一目了然。
-* **⚡ 本地 SQLite 持久化快取**：地區路線列表快取 **24 小時**，即時運行狀態快取 **5 分鐘**。兼顧毫秒級極速響應並避免對數據源伺服器造成過度請求。
-* **🔄 轉乘最少優先排序**：起訖站路線規劃自動以「轉乘次數最少」的乘車方案進行優先排序，並顯示在最前列。
-* **✈️ 智慧交通工具避開與重試**：規劃路線時預設排除飛機與渡輪；若查無路線（例如本州往返沖繩或特殊離島區間），程式將自動開啟飛機與渡輪並進行重試，兼顧陸路優先與跨海需求。
-* **🛤️ 途中停靠站與抵達時間**：支援顯示列車途中經過的所有停靠站點與其預計抵達時間，精準掌控乘車細節。
-* **🔗 嵌套共用區段轉乘解析**：優化 nested segment 解析邏輯，能正確解析並呈現 Yahoo! 路線情報中同區間內、共用票價區段之轉乘路線（如 JR 跨線路轉乘），避免轉乘資訊遺漏。
-* **🎨 精美終端機視覺 UI**：使用 `rich` 套件渲染精美的運行狀況與乘車方案表格，並以紅/黃等醒目色彩呈現異常運行狀態。
-* **📱 手機最佳化排版**：提供 `--mobile` 旗標，開啟 38 欄寬度超緊湊的直式排版。消除 CJK 全寬字元在手機 SSH 模擬器 (如 Termius、a-Shell) 上的折行與框線錯位，只呈現關鍵異常資訊。
-* **🤖 互動式引導模式**：在不加任何參數的情況下執行工具，即可開啟精美的互動式選單，支援使用鍵盤上下方向鍵選擇日本地區、搜尋路線、規劃起訖站路線、或查看詳細延誤資訊。
+1. **jptrain** 🚄：查詢日本鐵道、地鐵、新幹線的即時運行概況與延誤詳情，自動翻譯為繁體中文。
+   - 👉 詳細說明與使用方法請見 [jptrain 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/jptrain/README.md)。
+2. **twbus** 🚌：提供離線/快取優化的台灣附近公車即時 ETA、特定路線到站時間與直達規劃。
+   - 👉 詳細說明與使用方法請見 [twbus 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/twbus/README.md)。
+3. **ubike** 🚲：輸入 GPS 座標或 Google Maps 連結，查詢附近 YouBike 站點與即時可借車輛數。
+   - 👉 詳細說明與使用方法請見 [ubike 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/ubike/README.md)。
+4. **places** 🗺️：利用 Google Places API 查詢全球任何地點的餐廳與景點，支援指定搜尋類型與回傳語言。
+   - 👉 詳細說明與使用方法請見 [places 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/places/README.md)。
 
 ---
 
@@ -31,158 +21,17 @@
    ```bash
    cd hermes-go
    ```
-2. 以可編輯模式安裝此專案與其依賴套件 (包括 `python-telegram-bot`, `python-dotenv` 等)：
+2. 以可編輯模式安裝此專案與其依賴套件：
    ```bash
    uv pip install -e .
    ```
-
----
-
-## 💻 使用方法
-
-### 1. 互動式引導模式（預設）
-直接執行 CLI，不加任何子指令或參數：
-```bash
-uv run jptrain
-```
-這將會開啟一個非常直觀的互動式導覽選單，可使用鍵盤上下方向鍵挑選地區與路線。
-若選擇「查詢起訖站間路線運行狀況」，互動模式亦會引導您輸入起訖站、詢問是否指定出發日期/時間，以及是否顯示途中停靠站，免除記憶複雜指令的困擾。
-
-### 2. 快速快捷指令
-在終端機中一步到位直接獲取運行結果。
-
-* **查詢「特定區域所有路線運行狀態」**：
-  ```bash
-  uv run jptrain area "區域名稱、代碼或英文" [選項]
-  ```
-  *選項：*
-  - `--line`：篩選特定鐵路公司或路線名稱。
-  - `--mobile`：使用手機最佳化 38 欄寬度直式排版。
-  *範例：*
-  ```bash
-  uv run jptrain area "関東"
-  uv run jptrain area "kanto"
-  uv run jptrain area "4"
-  uv run jptrain area "關西" --line "山手線"
-  ```
-
-* **查詢「特定路線詳細運行詳情」**：
-  ```bash
-  uv run jptrain info "路線名稱" [選項]
-  ```
-  *選項：*
-  - `--mobile`：使用手機最佳化 38 欄寬度直式排版。
-  *範例：*
-  ```bash
-  uv run jptrain info "山手線"
-  uv run jptrain info "江ノ島電鐵線"
-  ```
-
-* **查詢「起訖站間的乘車路線與運行狀況」**：
-  ```bash
-  uv run jptrain route "出發站" "目的地站" [選項]
-  ```
-  *特色說明：*
-  - **轉乘最少優先**：規劃路線結果會優先以「轉乘次數最少」的方案進行排序呈現。
-  - **避開飛機與渡輪（智慧重試）**：預設不搭乘飛機與渡輪；若起訖站間無純陸路路線（如往返沖繩或離島），程式將會自動開啟飛機與渡輪並重新搜尋，兼顧大眾偏好與離島覆蓋。
-  *選項：*
-  - `-d, --date TEXT`：指定出發日期 (格式: `YYYYMMDD`，如 `20261026` 或 `1026`)。預設使用今日。
-  - `-t, --time TEXT`：指定出發時間 (格式: `HHMM`，如 `0700` 或 `07:00`)。預設使用現在時間。
-  - `-s, --show-stops`：顯示列車中途停靠之所有站點與抵達時間。預設不顯示。
-  - `--mobile`：使用手機最佳化 38 欄寬度直式排版。
-  *範例：*
-  ```bash
-  uv run jptrain route "東京" "新宿"
-  uv run jptrain route "荻窪" "白馬" --date "20261026" --time "0700" --show-stops
-  uv run jptrain route "大原(千葉県)" "上總中野" --mobile
-  ```
-
-### 3. 手機閱讀模式旗標 (`--mobile`)
-  在主指令或子指令中加入 `--mobile`，即可以 38 欄寬度完美緊湊排版呈現，特別適合手機終端機 (Termius / a-Shell)：
-  ```bash
-  # 啟動手機版互動式引導模式
-  uv run jptrain --mobile
-  
-  # 查詢手機版區域運行狀態
-  uv run jptrain area "関東" --mobile
-  ```
-
-### 4. 清除本地快取
-手動清空 SQLite 快取資料庫中的歷史快取：
-```bash
-uv run jptrain clean
-```
-
----
-
-## 🚌 twbus 使用方法 (台灣公車即時資訊 CLI)
-
-`twbus` 工具專為行動裝置終端機最佳化，**預設採用 38 欄寬度的直式排版**，非常適合透過手機 SSH (如 Termius) 或是自動化腳本進行查詢。
-
-在使用 `twbus` 之前，請將專案根目錄的 `.env.example` 複製並命名為 `.env`，填入您的 credentials：
-```env
-TDX_CLIENT_ID=您的_tdx_client_id
-TDX_CLIENT_SECRET=您的_tdx_client_secret
-```
-
-### 1. 查詢到目的地之直達公車路線
-輸入您的目前座標（緯度, 經度）與目的地名稱或地址，程式會自動將目的地解析為座標並匹配出所有直達公車路線，且查詢出在起點站的即時到站時間 (ETA) 與乘車站數。
-
-`--lat` 與 `--lon` 支援十進位數值或度分秒 DMS 格式（例如 `"北緯25°5′0″"`、`"東經121°34′43″"`）：
-```bash
-# 使用十進位經緯度
-uv run twbus search --lat 25.0338 --lon 121.5298 --dest "台北101"
-
-# 使用度分秒 DMS 格式
-uv run twbus search --lat "北緯25°5′0″" --lon "東經121°34′43″" --dest "台北車站"
-```
-
-### 2. 顯示最近站牌之到站公車
-輸入您目前的經緯度，列出附近 500 公尺內所有的公車站牌，並按步行距離由近到遠排序，顯示各站牌所有路線公車的即時 ETA：
-```bash
-uv run twbus nearby --lat 25.0338 --lon 121.5298
-uv run twbus nearby --lat "北緯25°5′0″" --lon "東經121°34′43″"
-```
-
-### 3. 查詢附近特定公車路線之到站時間
-輸入您目前的經緯度與公車號碼，查詢該公車在附近站牌（去程與返程）的即時預估到站時間：
-```bash
-uv run twbus eta --lat 25.0338 --lon 121.5298 --route "307"
-uv run twbus eta --lat "北緯25°5′0″" --lon "東經121°34′43″" --route "307"
-```
-
----
-
-## 🚲 ubike 使用方法 (台灣 YouBike 即時車況 CLI)
-
-`ubike` 工具專為行動裝置終端機最佳化，**預設採用 38 欄寬度的直式排版**，非常適合在手機（如 Termius）或 Telegram 中使用。
-
-與 `twbus` 相同，在使用前需於 `.env` 中設定 TDX 的 `TDX_CLIENT_ID` 與 `TDX_CLIENT_SECRET`。
-
-### 1. 查詢附近 YouBike 站點即時狀態
-直接傳入您複製的 GPS 資訊，支援多種輸入格式：
-- **經緯度數值**（如 `"25.02605, 121.5436"`）
-- **度分秒 DMS 格式**（如 `"北緯25°01'33.8\" 東經121°32'37.0\""`）
-- **Google 地圖網址**（支援一般網址與手機分享之 `maps.app.goo.gl` 短網址）
-
-```bash
-# 輸入經緯度數值
-uv run ubike nearby "25.02605, 121.5436"
-
-# 輸入度分秒 DMS 格式
-uv run ubike nearby "北緯25°01'33.8\" 東經121°32'37.0\""
-```
-
-### 2. 透過選項查詢附近站點
-若想手動輸入緯度、經度與設定搜尋半徑 (radius)，亦可使用選項：
-```bash
-uv run ubike nearby --lat 25.0260 --lon 121.5436 --radius 200
-```
-
-### 3. 清除本地 YouBike 快取資料
-```bash
-uv run ubike clean
-```
+3. 將專案根目錄的 `.env.example` 複製為 `.env`，並填入您的 API 憑證與金鑰：
+   ```bash
+   cp .env.example .env
+   ```
+   *編輯 `.env` 檔案並設定以下內容（依您欲使用的工具而定）：*
+   - `TDX_CLIENT_ID` 與 `TDX_CLIENT_SECRET`（用於 `twbus` 與 `ubike`）
+   - `GOOGLE_PLACES_API_KEY`（用於 `places`）
 
 ---
 
@@ -194,44 +43,32 @@ uv run ubike clean
   ```bash
   uv run python -m pytest
   ```
-* **執行日本鐵道查詢測試**：
+* **分模組執行測試**：
   ```bash
+  # 日本鐵道測試
   PYTHONPATH=src uv run python -m pytest tests/test_api.py tests/test_cache.py
-  ```
-* **執行台灣公車查詢與匹配測試**：
-  ```bash
+  # 台灣公車測試
   PYTHONPATH=src uv run python -m pytest tests/test_twbus.py
-  ```
-* **執行 YouBike 查詢與 GPS 連結解析測試**：
-  ```bash
+  # YouBike 測試
   PYTHONPATH=src uv run python -m pytest tests/test_ubike.py
+  # Google Places 測試
+  PYTHONPATH=src uv run python -m pytest tests/test_places.py
   ```
-
----
-
-本專案之鐵路運行狀態與公車到站數據完全對接公開即時數據源：
-* **[Yahoo!路線情報 - 運行情報](https://transit.yahoo.co.jp/diainfo)**：日本全國 8 大區域鐵路、新幹線與地鐵之營運概況。
-* **[TDX 運輸資料流通服務平臺](https://tdx.transportdata.tw/)**：台灣各地市區公車之站牌、路線站序、及預估到站時間（ETA），以及全台 YouBike 站點靜態資訊與即時車位資料。
-* **[OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/)**：目的地名稱與地址之經緯度座標解析（Geocoding）。
 
 ---
 
 ## 📂 專案目錄結構
 
 * `src/jptrain/`：日本鐵道即時查詢主程式源碼。
-  * `api.py`：對接 Yahoo! 路線情報的爬蟲解析模組。
-  * `cache.py`：管理 SQLite 本地持久化快取的邏輯模組。
-  * `formatter.py`：處理終端機視覺美化渲染與翻譯。
-  * `cli.py`：CLI 控制器主入口與互動選單。
+  * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/jptrain/README.md)
 * `src/twbus/`：台灣公車即時查詢主程式源碼。
-  * `api.py`：TDX 授權、附近的站牌、公車路線/站序匹配及 ETA 查詢模組。
-  * `cache.py`：管理 TDX 存取 Token 與縣市公車路線站序之本地 SQLite 快取。
-  * `cli.py`：手機最佳化 (38 欄寬直式排版) 之 CLI 控制器入口。
+  * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/twbus/README.md)
 * `src/ubike/`：台灣公共自行車即時車況主程式源碼。
-  * `api.py`：YouBike API 與 GPS 格式/連結解析模組。
-  * `cache.py`：管理 TDX Access Token 快取。
-  * `cli.py`：手機最佳化之 YouBike CLI 控制器。
+  * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/ubike/README.md)
+* `src/places/`：全球觀光美食即時查詢主程式源碼。
+  * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/places/README.md)
 * `tests/`：Pytest 單元測試腳本目錄。
   * `test_api.py` / `test_cache.py`：日本鐵道核心功能 Mock 測試。
-  * `test_twbus.py`：驗證 TDX 登入、地址解析、附近站牌及公車路線匹配。
-  * `test_ubike.py`：驗證 YouBike API 與 GPS 格式/連結解析。
+  * `test_twbus.py`：台灣公車 Mock 測試與解析。
+  * `test_ubike.py`：YouBike API 與 GPS 格式/連結解析。
+  * `test_places.py`：Google Places API 與全球 GPS 格式/連結解析。

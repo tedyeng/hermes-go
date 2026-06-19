@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-19
+
+### Added
+- **Google Places CLI (`places`)**: Implemented a new command line interface using Google Places API to search for nearby restaurants, tourist attractions, or custom type spots globally.
+- **Universal Coordinate Swapping**: Built a global latitude-longitude swap detection logic that automatically corrects coordinates if they are entered in the wrong order.
+- **Deduplication & Combined Search**: Created a joint query mechanism when no type is specified, which merges restaurant and attraction searches, de-duplicates them by `place_id`, and sorts them by walking distance.
+- **Language Localization**: Added the `--lang` flag (defaulting to `zh-TW`) to fetch names, addresses, and details in any supported Google Places API language (e.g. Japanese `ja` for searches in Tokyo).
+- **Unit Tests**: Created a dedicated `tests/test_places.py` file to test the API query client, coordinates decoding, distance logic, and global swapping heuristics.
+- **Documentation Restructuring**: Simplified the root `README.md` and modularized it by creating individual `README.md` files inside each CLI package (`src/jptrain/README.md`, `src/twbus/README.md`, `src/ubike/README.md`, `src/places/README.md`).
+
+### Changed
+- **Project Structure**: Updated `pyproject.toml` script entry points to register the `places` CLI, and created a dedicated implementation guide in `docs/places_implementation.md`.
+
+---
+
 ## [0.2.0] - 2026-06-13
+
 
 ### Added
 - **YouBike CLI (`ubike`)**: Implemented a new command line interface mirroring `twbus` structure to query nearby public bicycle stations.
