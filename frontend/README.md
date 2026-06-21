@@ -40,6 +40,8 @@ Run the following commands inside the `frontend/` directory:
 *   `npm run test`: Run Jest unit tests.
 *   `npm run coverage`: Run Jest unit tests and display the branch coverage report.
 *   `npm run test:e2e`: Execute Playwright end-to-end integration tests (will spin up the dev server automatically).
+*   `npm run test:visual`: Run Playwright visual layout regression tests.
+*   `npm run test:visual:update`: Generate or update visual reference baseline snapshots.
 
 ---
 
