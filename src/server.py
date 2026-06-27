@@ -20,6 +20,8 @@ from twbus import api as twbus_api
 from places import api as places_api
 from jptrain import api as jptrain_api
 from jptrain.formatter import to_traditional_chinese, get_status_info
+from tw_weather import api as weather_api
+from tw_weather.cache import cache as weather_cache
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -423,6 +425,283 @@ def get_jp_route(
         }
     except Exception as e:
         logger.error(f"Error searching Japan route: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------- Weather Endpoints -----------------
+
+@app.get("/api/weather/check")
+def get_weather_check(
+    location: str = Query("臺北市信義區", description="Location name or GPS coordinates"),
+    cache_time: int = Query(900, description="Cache TTL in seconds")
+):
+    """
+    Get 3-day weather forecast and umbrella advice for a location.
+    """
+    api_key = os.getenv("CWA_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="CWA_API_KEY is not configured in backend environment variables.")
+        
+    try:
+        loc_res = weather_api.resolve_location(location)
+        if not loc_res:
+            raise HTTPException(status_code=400, detail="Could not resolve the specified location.")
+            
+        county, district, resolved_lat, resolved_lon = loc_res
+        
+        # County Fallback
+        if not district:
+            dataset_id = weather_api.COUNTY_DATASET_MAP.get(county)
+            if not dataset_id:
+                raise HTTPException(status_code=400, detail=f"County '{county}' is not supported by CWA.")
+                
+            cache_key = f"cwa_county_{dataset_id}"
+            weather_data = weather_cache.get(cache_key)
+            if not weather_data:
+                raw_data = weather_api.fetch_cwa_weather(api_key, "F-C0032-001", county)
+                weather_data = weather_api.parse_county_weather_json(raw_data, county)
+                weather_cache.set(cache_key, weather_data, custom_expiry=cache_time)
+                
+            return {
+                "status": "success",
+                "level": "county",
+                "county": county,
+                "data": weather_data
+            }
+        else:
+            dataset_id = weather_api.COUNTY_DATASET_MAP.get(county)
+            if not dataset_id:
+                raise HTTPException(status_code=400, detail=f"County '{county}' is not supported by CWA.")
+                
+            cache_key = f"cwa_weather_{dataset_id}_{district}"
+            weather_data = weather_cache.get(cache_key)
+            if not weather_data:
+                raw_data = weather_api.fetch_cwa_weather(api_key, dataset_id, district)
+                weather_data = weather_api.parse_weather_json(raw_data, district)
+                weather_cache.set(cache_key, weather_data, custom_expiry=cache_time)
+                
+            return {
+                "status": "success",
+                "level": "town",
+                "county": county,
+                "district": district,
+                "coords": {"lat": resolved_lat, "lon": resolved_lon},
+                "data": weather_data
+            }
+    except Exception as e:
+        logger.error(f"Error checking weather: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/weather/hourly")
+def get_weather_hourly(
+    location: str = Query("臺北市信義區", description="Location name or GPS coordinates"),
+    all_hours: bool = Query(False, description="Whether to show all 48 hours instead of today/24h filter"),
+    cache_time: int = Query(900, description="Cache TTL in seconds")
+):
+    """
+    Get 48h hourly forecast (temp, apparent temp, RH, rain prob, wind direction & speed).
+    """
+    api_key = os.getenv("CWA_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="CWA_API_KEY is not configured in backend environment variables.")
+        
+    try:
+        loc_res = weather_api.resolve_location(location)
+        if not loc_res:
+            raise HTTPException(status_code=400, detail="Could not resolve the specified location.")
+            
+        county, district, resolved_lat, resolved_lon = loc_res
+        
+        # If district is missing, resolve first district
+        if not district:
+            base_id = weather_api.COUNTY_DATASET_MAP.get(county)
+            if not base_id:
+                raise HTTPException(status_code=400, detail=f"County '{county}' is not supported.")
+            raw_data = weather_api.fetch_cwa_weather(api_key, base_id, "")
+            records = raw_data.get("records", {})
+            locations = records.get("Locations", [])
+            if locations and locations[0].get("Location"):
+                district = locations[0].get("Location", [])[0].get("LocationName")
+            else:
+                raise HTTPException(status_code=400, detail="Failed to resolve district for county.")
+                
+        base_id = weather_api.COUNTY_DATASET_MAP.get(county)
+        dataset_id = base_id
+        
+        cache_key = f"cwa_weather_{dataset_id}_all"
+        weather_data = weather_cache.get(cache_key)
+        if not weather_data:
+            weather_data = weather_api.fetch_cwa_weather(api_key, dataset_id, district)
+            weather_cache.set(cache_key, weather_data, custom_expiry=cache_time)
+            
+        hourly_records = weather_api.parse_hourly_weather_json(weather_data, district)
+        
+        # Filter logic matching cli
+        from datetime import datetime, timezone, timedelta
+        tz = timezone(timedelta(hours=8))
+        now = datetime.now(tz)
+        today_midnight = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        if all_hours:
+            filtered_hours = [r for r in hourly_records if datetime.fromisoformat(r["datetime"]) >= now - timedelta(minutes=30)]
+            title = "未來 48 小時完整預報"
+        else:
+            filtered_hours = []
+            for r in hourly_records:
+                dt = datetime.fromisoformat(r["datetime"])
+                if dt >= now - timedelta(minutes=30) and dt <= today_midnight:
+                    filtered_hours.append(r)
+            
+            showing_24h = False
+            if len(filtered_hours) < 6:
+                filtered_hours = []
+                showing_24h = True
+                end_time = now + timedelta(hours=24)
+                for r in hourly_records:
+                    dt = datetime.fromisoformat(r["datetime"])
+                    if dt >= now - timedelta(minutes=30) and dt <= end_time:
+                        filtered_hours.append(r)
+            title = "今日剩餘時段預報" if not showing_24h else "未來 24 小時精細預報"
+            
+        return {
+            "status": "success",
+            "county": county,
+            "district": district,
+            "title": title,
+            "data": filtered_hours
+        }
+    except Exception as e:
+        logger.error(f"Error checking hourly weather: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/weather/rain")
+def get_weather_rain(
+    location: str = Query("臺北市信義區", description="Location name or GPS coordinates"),
+    cache_time: int = Query(600, description="Cache TTL in seconds")
+):
+    """
+    Get live rain observation data, rain rate label, alerts, and 2-day outlook.
+    """
+    api_key = os.getenv("CWA_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="CWA_API_KEY is not configured in backend environment variables.")
+        
+    try:
+        loc_res = weather_api.resolve_location(location)
+        if not loc_res:
+            raise HTTPException(status_code=400, detail="Could not resolve the specified location.")
+            
+        county, district, resolved_lat, resolved_lon = loc_res
+        
+        if resolved_lat == 0.0 or resolved_lon == 0.0:
+            resolved_lat, resolved_lon = 25.0339, 121.5644
+            res = weather_api.geocode_address(county)
+            if res:
+                resolved_lat, resolved_lon = res[2], res[3]
+                
+        # Fetch live rain data
+        cache_key = "cwa_rain_observations"
+        weather_data = weather_cache.get(cache_key)
+        if not weather_data:
+            weather_data = weather_api.fetch_cwa_rain_data(api_key)
+            weather_cache.set(cache_key, weather_data, custom_expiry=cache_time)
+            
+        nearest_station, distance = weather_api.find_nearest_rain_station(weather_data, resolved_lat, resolved_lon)
+        
+        st_name = nearest_station.get("StationName", "未知")
+        st_id = nearest_station.get("StationId", "未知")
+        obs_time = nearest_station.get("ObsTime", {}).get("DateTime", "未知")
+        
+        # Extract station coordinates
+        coords = nearest_station.get("GeoInfo", {}).get("Coordinates", [])
+        st_lat = resolved_lat
+        st_lon = resolved_lon
+        if coords:
+            for coord in coords:
+                if coord.get("CoordinateName") == "WGS84":
+                    try:
+                        st_lat = float(coord.get("StationLatitude", 0.0))
+                        st_lon = float(coord.get("StationLongitude", 0.0))
+                    except ValueError:
+                        pass
+                    break
+        
+        elements = nearest_station.get("RainfallElement", {})
+        r_10m = elements.get("Past10Min", {}).get("Precipitation", "0.0")
+        r_1h = elements.get("Past1hr", {}).get("Precipitation", "0.0")
+        r_3h = elements.get("Past3hr", {}).get("Precipitation", "0.0")
+        r_24h = elements.get("Past24hr", {}).get("Precipitation", "0.0")
+        r_today = elements.get("Now", {}).get("Precipitation", "0.0")
+        
+        f_1h = weather_api.format_rain_value(r_1h)
+        f_3h = weather_api.format_rain_value(r_3h)
+        f_24h = weather_api.format_rain_value(r_24h)
+        
+        warning_name, warning_color = weather_api.get_rain_alert_level(f_1h, f_3h, f_24h)
+        intensity_label = weather_api.get_rain_intensity_label(f_1h)
+        
+        # Fetch future rain forecast (using QPF estimates)
+        fc_list = []
+        try:
+            town_dataset_id = weather_api.COUNTY_DATASET_MAP.get(county)
+            if town_dataset_id:
+                cache_key_fc = f"weather_qpf_forecast_{town_dataset_id}_{district}"
+                fc_data = weather_cache.get(cache_key_fc)
+                if not fc_data:
+                    fc_raw = weather_api.fetch_cwa_weather(api_key, town_dataset_id, district, element_names="PoP3h,Wx")
+                    fc_data = weather_api.parse_3h_forecast_for_rain(fc_raw, district)
+                    weather_cache.set(cache_key_fc, fc_data, custom_expiry=cache_time)
+                
+                for item in fc_data[:4]:
+                    wx = item.get("wx_summary", "未知")
+                    pop = item.get("pop", 0)
+                    min_mm = item.get("min_mm", 0.0)
+                    max_mm = item.get("max_mm", 0.0)
+                    if max_mm <= 0.0:
+                        mm_str = "無雨 (0 mm)"
+                    elif min_mm == max_mm:
+                        mm_str = f"{min_mm:.1f} mm"
+                    else:
+                        mm_str = f"{min_mm:.1f} ~ {max_mm:.1f} mm"
+                    fc_list.append({
+                        "period": item.get("period_name", ""),
+                        "wx": wx,
+                        "pop": pop,
+                        "est_volume": mm_str
+                    })
+        except Exception:
+            pass
+            
+        return {
+            "status": "success",
+            "county": county,
+            "district": district,
+            "station": {
+                "name": st_name,
+                "id": st_id,
+                "distance_km": round(distance, 2),
+                "obs_time": obs_time,
+                "lat": st_lat,
+                "lon": st_lon
+            },
+            "observations": {
+                "past_10m": weather_api.display_rain_value(r_10m),
+                "past_1h": weather_api.display_rain_value(r_1h),
+                "past_3h": weather_api.display_rain_value(r_3h),
+                "past_24h": weather_api.display_rain_value(r_24h),
+                "today": weather_api.display_rain_value(r_today),
+                "intensity_label": intensity_label
+            },
+            "alert": {
+                "level": warning_name,
+                "color": warning_color
+            },
+            "forecast": fc_list
+        }
+    except Exception as e:
+        logger.error(f"Error checking rain observations: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

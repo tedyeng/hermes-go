@@ -14,6 +14,10 @@ A premium, interactive web interface dashboard for the `hermes-go` project. It c
 *   **🚄 Japan Train Status & Route Search**:
     *   Monitor regional railway operations and warning delays.
     *   Plan travel itineraries across Japan rail stations with fare, duration, and transit directions.
+*   **🌦️ Taiwan Weather Analytics & Observations**:
+    *   Monitor live rainfall rates, geocoded station distances, and current rain intensity descriptions.
+    *   Check 3-day weather summaries, temperature ranges, precipitation probabilities, comfort indexes, and smart rain recommendations (e.g. `需帶直傘`, `需帶折疊傘`).
+    *   Check 48h hourly forecasts featuring temp, apparent temp, RH, wind speed/direction, and comfort details.
 *   **🗺️ Interactive Leaflet Map**: Click anywhere to pan and sync the active coordinate center, or click custom data markers to open details popups.
 
 ---

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { getBikesStatusColor, formatEta } from '../utils/helpers';
 
 interface SidebarProps {
-  mode: 'ubike' | 'twbus' | 'places' | 'jptrain';
+  mode: 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather';
   lat: number;
   lon: number;
   radius: number;
@@ -37,6 +37,13 @@ interface SidebarProps {
   // Places specific states
   placesType: string;
   setPlacesType: (t: string) => void;
+
+  // Weather specific states
+  weatherSubMode?: 'rain' | 'check' | 'hourly';
+  setWeatherSubMode?: (val: 'rain' | 'check' | 'hourly') => void;
+  weatherData?: any;
+  isHourlyAll?: boolean;
+  setIsHourlyAll?: (val: boolean) => void;
 }
 
 export default function Sidebar({
@@ -71,7 +78,12 @@ export default function Sidebar({
   isRoutingJp,
   
   placesType,
-  setPlacesType
+  setPlacesType,
+  weatherSubMode,
+  setWeatherSubMode,
+  weatherData,
+  isHourlyAll,
+  setIsHourlyAll
 }: SidebarProps) {
   const [searchText, setSearchText] = useState('');
   const [isLocating, setIsLocating] = useState(false);
@@ -570,6 +582,258 @@ export default function Sidebar({
                   !isRoutingJp && jpRoutes && <div className="empty-state">沒有找到乘車路線方案。</div>
                 )}
               </>
+            )}
+          </>
+        )}
+
+        {/* --- Weather Mode --- */}
+        {mode === 'weather' && setWeatherSubMode && (
+          <>
+            {/* Weather submode switches */}
+            <div className="places-chips-container" style={{ marginBottom: '16px' }}>
+              <button
+                className={`chip-filter ${weatherSubMode === 'rain' ? 'active' : ''}`}
+                onClick={() => setWeatherSubMode('rain')}
+              >
+                💧 雨量與預期
+              </button>
+              <button
+                className={`chip-filter ${weatherSubMode === 'check' ? 'active' : ''}`}
+                onClick={() => setWeatherSubMode('check')}
+              >
+                🔮 三日天氣預報
+              </button>
+              <button
+                className={`chip-filter ${weatherSubMode === 'hourly' ? 'active' : ''}`}
+                onClick={() => setWeatherSubMode('hourly')}
+              >
+                🕒 逐小時天氣
+              </button>
+            </div>
+
+            {isLoading && (
+              <div className="loading-indicator">
+                <div className="spinner"></div> 載入天氣資料中...
+              </div>
+            )}
+
+            {error && <div className="error-message">{error}</div>}
+
+            {!isLoading && !error && weatherData && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* 1. Rain & Forecast Submode */}
+                {weatherSubMode === 'rain' && (
+                  <>
+                    {/* Station Info Card */}
+                    <div className="list-card glass" style={{ padding: '12px' }}>
+                      <div className="card-title" style={{ fontSize: '14px', color: 'var(--color-primary)' }}>
+                        📡 最近雨量觀測站
+                      </div>
+                      <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                        <div>站名: <b>{weatherData.station?.name} ({weatherData.station?.id})</b></div>
+                        <div>距離: <b>{weatherData.station?.distance_km} km</b></div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          觀測時間: {weatherData.station?.obs_time}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rain Observations Card */}
+                    <div className="list-card glass" style={{ padding: '12px' }}>
+                      <div className="card-title" style={{ fontSize: '14px', color: 'var(--color-primary)' }}>
+                        💧 即時累積降雨量
+                      </div>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '8px',
+                        fontSize: '12px',
+                        marginTop: '8px'
+                      }}>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>10分鐘累積</span>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '2px' }}>
+                            {weatherData.observations?.past_10m}
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>過去1小時</span>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '2px' }}>
+                            {weatherData.observations?.past_1h}
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>過去3小時</span>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '2px' }}>
+                            {weatherData.observations?.past_3h}
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>過去24小時</span>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '2px' }}>
+                            {weatherData.observations?.past_24h}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        marginTop: '10px',
+                        borderTop: '1px solid var(--border-color)',
+                        paddingTop: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        fontSize: '13px'
+                      }}>
+                        <div>今日累積量: <b>{weatherData.observations?.today}</b></div>
+                        <div style={{ color: 'var(--color-primary)' }}>
+                          即時雨勢體感: <b style={{ color: '#06b6d4' }}>{weatherData.observations?.intensity_label}</b>
+                        </div>
+                        <div>
+                          防汛警戒分級: <span style={{
+                            fontWeight: 'bold',
+                            color: weatherData.alert?.color === 'red' ? 'var(--color-danger)' :
+                                   weatherData.alert?.color === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+                          }}>{weatherData.alert?.level}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rain Forecast Outlook Card */}
+                    {weatherData.forecast && weatherData.forecast.length > 0 && (
+                      <div className="list-card glass" style={{ padding: '12px' }}>
+                        <div className="card-title" style={{ fontSize: '14px', color: 'var(--color-primary)', marginBottom: '8px' }}>
+                          🔮 未來兩日降雨預估
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {weatherData.forecast.map((item: any, idx: number) => {
+                            const isHighPop = item.pop >= 70;
+                            return (
+                              <div key={idx} style={{
+                                padding: '6px 8px',
+                                background: 'rgba(255,255,255,0.01)',
+                                borderLeft: `3px solid ${isHighPop ? 'var(--color-danger)' : 'var(--border-color)'}`,
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{item.period}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px', color: 'var(--text-muted)' }}>
+                                  <span>天氣: {item.wx} ({item.pop}%)</span>
+                                  <span style={{ color: isHighPop ? 'var(--color-danger)' : 'var(--text-secondary)' }}>
+                                    {item.est_volume}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 2. 3-Day Forecast Submode */}
+                {weatherSubMode === 'check' && weatherData.data && (
+                  <>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      查詢層級: {weatherData.level === 'town' ? `鄉鎮市區 (${weatherData.county} ${weatherData.district})` : `縣市總體 (${weatherData.county})`}
+                    </div>
+                    {weatherData.data.map((item: any, idx: number) => {
+                      const pop = item.pop ?? 0;
+                      const isRain = pop >= 30;
+                      return (
+                        <div key={idx} className="list-card glass" style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{item.period_name}</span>
+                            {item.recommendation && (
+                              <span style={{
+                                fontSize: '11px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: isRain ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                color: isRain ? 'var(--color-danger)' : 'var(--color-success)'
+                              }}>{item.recommendation}</span>
+                            )}
+                          </div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '4px',
+                            fontSize: '12px',
+                            marginTop: '8px',
+                            color: 'var(--text-secondary)'
+                          }}>
+                            <div>溫度: <b>{item.temp_min}°C ~ {item.temp_max}°C</b></div>
+                            <div>降雨機率: <b>{pop}%</b></div>
+                            <div style={{ gridColumn: 'span 2' }}>天氣: <b>{item.wx_summary}</b></div>
+                            {item.comfort && <div style={{ gridColumn: 'span 2' }}>舒適度: <b>{item.comfort}</b></div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* 3. Hourly Forecast Submode */}
+                {weatherSubMode === 'hourly' && weatherData.data && setIsHourlyAll && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{weatherData.title}</span>
+                      <button
+                        className="chip-filter"
+                        style={{ padding: '2px 8px', fontSize: '10px', height: 'auto' }}
+                        onClick={() => setIsHourlyAll(!isHourlyAll)}
+                      >
+                        {isHourlyAll ? '切換今日/24h' : '顯示完整48h'}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {weatherData.data.map((item: any, idx: number) => {
+                        const dateObj = new Date(item.datetime);
+                        const timeDisplay = dateObj.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const dateDisplay = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                        const isHighRain = item.pop >= 70;
+                        const isStrongWind = parseFloat(item.wind_speed) >= 10.8;
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className="list-card glass"
+                            style={{
+                              padding: '8px 10px',
+                              borderLeft: `3px solid ${isHighRain ? 'var(--color-danger)' : 'var(--border-color)'}`,
+                              marginBottom: 0
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px' }}>
+                              <span>🕒 {dateDisplay} {timeDisplay}</span>
+                              <span style={{ color: isHighRain ? 'var(--color-danger)' : 'var(--text-secondary)' }}>
+                                {item.wx} (☔{item.pop}%)
+                              </span>
+                            </div>
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(3, 1fr)',
+                              gap: '4px',
+                              fontSize: '11px',
+                              marginTop: '6px',
+                              color: 'var(--text-muted)'
+                            }}>
+                              <div>溫度: <b style={{ color: 'var(--text-primary)' }}>{item.temp}°C</b></div>
+                              <div>體感: <b style={{ color: 'var(--text-primary)' }}>{item.apparent_temp}°C</b></div>
+                              <div>濕度: <b>{item.rh}%</b></div>
+                              <div style={{ gridColumn: 'span 2' }}>
+                                風向: <b>{item.wind_dir}</b> ({item.wind_speed} m/s)
+                                {isStrongWind && <span style={{ color: 'var(--color-danger)', marginLeft: '4px' }}>⚠️ 強風</span>}
+                              </div>
+                              <div>舒適: <b>{item.comfort}</b></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </>
         )}

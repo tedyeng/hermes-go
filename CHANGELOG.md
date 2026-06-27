@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-27
+
+### Added
+- **Taiwan Weather CLI (`tw-weather`)**: Implemented a new command line interface to query Taiwan local weather forecasts and rain alerts from the Central Weather Administration (CWA).
+- **Check Command (`check`)**: General weather and umbrella recommendation utility supporting counties, districts, GPS/DMS locations, and Google Maps URL parsing. Features county-level fallback.
+- **Hourly Command (`hourly`)**: Fine-grained 48-hour hourly sequence forecast displaying temperature, apparent temperature, relative humidity, precipitation probability, wind speed/direction, and wind safety alarms. Includes `--all-hours` option.
+- **Rain Command (`rain`)**: Real-time rainfall observations from the nearest CWA automatic rain station, featuring live rain rate classifications (e.g. Drizzle, Light rain) and warning levels (Heavy Rain, Torrential, etc.).
+- **Future Rain Outlook & Volume Estimate**: Displays a 2-day precipitation probability outlook and custom rainfall volume estimation (in mm ranges) derived from Wx and PoP fields.
+- **County Summary & Board (`summary`, `board`)**: Fast 36-hour forecasts and a nation-wide rainfall ranking board.
+- **Unit Tests**: Full suite coverage in `tests/test_tw_weather.py` with mock-based API offline tests.
+
+### Changed
+- **Project Version**: Upgraded package version in `pyproject.toml` to `0.4.0`.
+- **Root README**: Updated the description of `tw-weather` in the root `README.md` to include all subcommands and features.
+
+---
+
 ## [0.3.0] - 2026-06-19
 
 ### Added

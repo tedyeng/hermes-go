@@ -3,7 +3,7 @@ import './App.css';
 import Sidebar from './components/Sidebar';
 import MapContainer from './components/MapContainer';
 
-type Mode = 'ubike' | 'twbus' | 'places' | 'jptrain';
+type Mode = 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather';
 
 // Helper to determine the API endpoint based on development vs production mode
 const getApiUrl = (path: string) => {
@@ -45,6 +45,11 @@ export default function App() {
   const [jpToStation, setJpToStation] = useState('');
   const [isRoutingJp, setIsRoutingJp] = useState(false);
 
+  // Weather states
+  const [weatherSubMode, setWeatherSubMode] = useState<'rain' | 'check' | 'hourly'>('rain');
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [isHourlyAll, setIsHourlyAll] = useState(false);
+
   // 1. Fetch Japan Train areas on initial load
   useEffect(() => {
     const fetchJpAreas = async () => {
@@ -82,6 +87,59 @@ export default function App() {
       return;
     }
 
+    if (mode === 'weather') {
+      const fetchWeather = async () => {
+        setIsLoading(true);
+        setError(null);
+        setWeatherData(null);
+        try {
+          let url = '';
+          if (weatherSubMode === 'rain') {
+            url = `/api/weather/rain?location=${lat},${lon}`;
+          } else if (weatherSubMode === 'check') {
+            url = `/api/weather/check?location=${lat},${lon}`;
+          } else {
+            url = `/api/weather/hourly?location=${lat},${lon}&all_hours=${isHourlyAll}`;
+          }
+          const res = await fetch(getApiUrl(url));
+          if (!res.ok) throw new Error(`天氣 API 回傳異常 (HTTP ${res.status})`);
+          const json = await res.json();
+          if (json.status === 'success') {
+            setWeatherData(json);
+            
+            // Map marker to station or resolved location
+            if (weatherSubMode === 'rain' && json.station) {
+              setData([{
+                uid: json.station.id,
+                name: `雨量測站: ${json.station.name}`,
+                lat: json.station.lat,
+                lon: json.station.lon,
+                address: `距離您約 ${json.station.distance_km} 公里`
+              }]);
+            } else if (json.coords) {
+              setData([{
+                uid: 'resolved-loc',
+                name: `${json.county}${json.district || ''}`,
+                lat: json.coords.lat,
+                lon: json.coords.lon,
+                address: '查詢區域定位中心'
+              }]);
+            } else {
+              setData([]);
+            }
+          } else {
+            setError(json.message || '查詢天氣時發生錯誤');
+          }
+        } catch (err: any) {
+          setError(err.message || '天氣後端連線失敗');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchWeather();
+      return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
@@ -116,7 +174,7 @@ export default function App() {
     };
 
     fetchData();
-  }, [mode, lat, lon, radius, placesType]);
+  }, [mode, lat, lon, radius, placesType, weatherSubMode, isHourlyAll]);
 
   // Fetch Japan train delay warning list
   const fetchJpStatus = async () => {
@@ -249,6 +307,11 @@ export default function App() {
         isRoutingJp={isRoutingJp}
         placesType={placesType}
         setPlacesType={setPlacesType}
+        weatherSubMode={weatherSubMode}
+        setWeatherSubMode={setWeatherSubMode}
+        weatherData={weatherData}
+        isHourlyAll={isHourlyAll}
+        setIsHourlyAll={setIsHourlyAll}
       />
 
       {/* Main Map View Section */}
@@ -289,6 +352,12 @@ export default function App() {
               onClick={() => setMode('jptrain')}
             >
               🚄 日本鐵道
+            </button>
+            <button
+              className={`tab-btn ${mode === 'weather' ? 'active' : ''}`}
+              onClick={() => setMode('weather')}
+            >
+              🌦️ 台灣天氣
             </button>
           </div>
         </div>

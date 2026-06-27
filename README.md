@@ -10,6 +10,8 @@
    - 👉 詳細說明與使用方法請見 [ubike 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/ubike/README.md)。
 4. **places** 🗺️：利用 Google Places API 查詢全球任何地點的餐廳與景點，支援指定搜尋類型與回傳語言。
    - 👉 詳細說明與使用方法請見 [places 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/places/README.md)。
+5. **tw-weather** 🌦️：整合中央氣象署鄉鎮預報、今明 36 小時預報與即時雨量觀測 API，提供天氣、溫度、舒適度、降雨機率、風速警戒、風向、及精準的雨具攜帶建議。支援即時雨勢狀態標籤、未來降雨估算、逐小時預報與全台降雨看板。
+   - 👉 詳細說明與使用方法請見 [tw-weather 說明文件](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/tw_weather/README.md)。
 
 ---
 
@@ -32,6 +34,7 @@
    *編輯 `.env` 檔案並設定以下內容（依您欲使用的工具而定）：*
    - `TDX_CLIENT_ID` 與 `TDX_CLIENT_SECRET`（用於 `twbus` 與 `ubike`）
    - `GOOGLE_PLACES_API_KEY`（用於 `places`）
+   - `CWA_API_KEY`（用於 `tw-weather`）
 
 ---
 
@@ -53,6 +56,8 @@
   PYTHONPATH=src uv run python -m pytest tests/test_ubike.py
   # Google Places 測試
   PYTHONPATH=src uv run python -m pytest tests/test_places.py
+  # 台灣天氣測試
+  PYTHONPATH=src uv run python -m pytest tests/test_tw_weather.py
   ```
 
 ---
@@ -67,8 +72,12 @@
   * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/ubike/README.md)
 * `src/places/`：全球觀光美食即時查詢主程式源碼。
   * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/places/README.md)
+* `src/tw_weather/`：台灣鄉鎮天氣預報與雨具建議主程式源碼。
+  * [README.md](file:///Users/tedyeng/VSCodeProjects/hermes-go/src/tw_weather/README.md)
 * `tests/`：Pytest 單元測試腳本目錄。
   * `test_api.py` / `test_cache.py`：日本鐵道核心功能 Mock 測試。
   * `test_twbus.py`：台灣公車 Mock 測試與解析。
   * `test_ubike.py`：YouBike API 與 GPS 格式/連結解析。
   * `test_places.py`：Google Places API 與全球 GPS 格式/連結解析。
+  * `test_tw_weather.py`：台灣天氣 API 與 GPS 格式/連結解析及雨具攜帶邏輯測試。
+

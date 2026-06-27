@@ -1,0 +1,34 @@
+# CWA Weather CLI Checklist
+
+- [x] Create `src/weather/__init__.py`
+- [x] Create `src/weather/cache.py` (SQLite-based caching for API responses)
+- [x] Create `src/weather/api.py` (CWA API client and GPS/address parser)
+- [x] Create `src/weather/cli.py` (Click-based commands and Rich formatting)
+- [x] Modify `pyproject.toml` (Register script entry point)
+- [x] Run `pip install -e .` or package setup to register the new command
+- [x] Rename CLI package to `tw_weather` and command to `tw-weather`
+- [x] Verify implementation with manual checks and unit tests
+- [x] Create `walkthrough.md` summarizing the changes and verification results
+- [x] Add `舒適度指數` (comfort level) parsing in `api.py`
+- [x] Implement CWA county forecast `F-C0032-001` fetcher and parser in `api.py`
+- [x] Implement county fallback in `check` command (`cli.py`)
+- [x] Add `summary` and `board` commands (`cli.py`)
+- [x] Update unit tests in `tests/test_tw_weather.py`
+- [x] Verify extensions manually and update `walkthrough.md`
+- [x] Add `parse_hourly_weather_json` in `api.py`
+- [x] Implement `hourly` command in `cli.py`
+- [x] Update unit tests in `tests/test_tw_weather.py` for hourly command
+- [x] Verify hourly command manually and update `walkthrough.md`
+- [x] Add `fetch_cwa_rain_data` and distance selectors in `api.py`
+- [x] Implement `rain` command in `cli.py`
+- [x] Update unit tests in `tests/test_tw_weather.py` for rain command
+- [x] Verify rain command manually and update `walkthrough.md`
+- [x] Implement rain intensity classification `get_rain_intensity_label` in `api.py`
+- [x] Integrate forecast query and future outlook in `rain` command (`cli.py`)
+- [x] Update unit tests in `tests/test_tw_weather.py` for rain intensity and forecast
+- [x] Verify rain command manually and update `walkthrough.md`
+- [x] Support `--all-hours` option in `hourly` command to show complete 48H forecast
+- [x] Add FastAPI endpoints for `tw-weather` (`/api/weather/check`, `/api/weather/hourly`, `/api/weather/rain`) in `src/server.py`
+- [x] Update frontend `App.tsx` and components (`Sidebar.tsx`, `MapContainer.tsx`) to support `weather` mode
+- [x] Test and verify weather API endpoints and dashboard UI integration
+- [x] Update all CLI `--help` docstrings with detailed descriptions, parameter explanations, and usage examples (check/summary/board/hourly/rain/clean)

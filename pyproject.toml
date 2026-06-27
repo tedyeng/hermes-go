@@ -1,6 +1,6 @@
 [project]
 name = "hermes-go"
-version = "0.3.0"
+version = "0.4.0"
 
 description = "A unified CLI tool for querying Japan railways status (jptrain) and Taiwan TDX bus arrival info (twbus)."
 readme = "README.md"
@@ -22,6 +22,7 @@ jptrain = "jptrain.cli:cli"
 twbus = "twbus.cli:cli"
 ubike = "ubike.cli:cli"
 places = "places.cli:cli"
+tw-weather = "tw_weather.cli:cli"
 
 
 [build-system]
