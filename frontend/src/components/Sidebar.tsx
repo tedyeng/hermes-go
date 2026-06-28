@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { getBikesStatusColor, formatEta } from '../utils/helpers';
 
 interface SidebarProps {
-  mode: 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather';
+  mode: 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather' | 'jpweather';
   lat: number;
   lon: number;
   radius: number;
@@ -44,6 +44,11 @@ interface SidebarProps {
   weatherData?: any;
   isHourlyAll?: boolean;
   setIsHourlyAll?: (val: boolean) => void;
+
+  // Japan Weather specific states
+  jpWeatherSubMode?: 'current' | 'forecast' | 'golden';
+  setJpWeatherSubMode?: (val: 'current' | 'forecast' | 'golden') => void;
+  jpWeatherData?: any;
 }
 
 export default function Sidebar({
@@ -83,7 +88,10 @@ export default function Sidebar({
   setWeatherSubMode,
   weatherData,
   isHourlyAll,
-  setIsHourlyAll
+  setIsHourlyAll,
+  jpWeatherSubMode,
+  setJpWeatherSubMode,
+  jpWeatherData
 }: SidebarProps) {
   const [searchText, setSearchText] = useState('');
   const [isLocating, setIsLocating] = useState(false);
@@ -832,6 +840,195 @@ export default function Sidebar({
                       })}
                     </div>
                   </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {mode === 'jpweather' && setJpWeatherSubMode && (
+          <>
+            {/* Weather submode switches */}
+            <div className="places-chips-container" style={{ marginBottom: '16px' }}>
+              <button
+                className={`chip-filter ${jpWeatherSubMode === 'current' ? 'active' : ''}`}
+                onClick={() => setJpWeatherSubMode('current')}
+              >
+                🌦️ 即時天氣
+              </button>
+              <button
+                className={`chip-filter ${jpWeatherSubMode === 'forecast' ? 'active' : ''}`}
+                onClick={() => setJpWeatherSubMode('forecast')}
+              >
+                📅 一週預報
+              </button>
+              <button
+                className={`chip-filter ${jpWeatherSubMode === 'golden' ? 'active' : ''}`}
+                onClick={() => setJpWeatherSubMode('golden')}
+              >
+                📸 黃金攝影
+              </button>
+            </div>
+
+            {isLoading && (
+              <div className="loading-indicator">
+                <div className="spinner"></div> 載入日本天氣中...
+              </div>
+            )}
+
+            {error && <div className="error-message">{error}</div>}
+
+            {!isLoading && !error && jpWeatherData && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  定位位置: <b>{jpWeatherData.location?.name} ({jpWeatherData.location?.prefecture || ''}, {jpWeatherData.location?.country || ''})</b>
+                </div>
+
+                {/* 1. Current Weather Submode */}
+                {jpWeatherSubMode === 'current' && jpWeatherData.current && (
+                  <>
+                    <div className="list-card glass" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ fontSize: '48px', lineHeight: '1' }}>{jpWeatherData.current.weather_emoji}</span>
+                        <div>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                            {jpWeatherData.current.temperature}°C
+                          </div>
+                          <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                            {jpWeatherData.current.weather_desc}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '8px',
+                        fontSize: '12px',
+                        borderTop: '1px solid var(--border-color)',
+                        paddingTop: '12px',
+                        marginTop: '4px'
+                      }}>
+                        <div>體感溫度: <b>{jpWeatherData.current.apparent_temperature}°C</b></div>
+                        <div>相對濕度: <b>{jpWeatherData.current.humidity}%</b></div>
+                        <div>降雨量: <b>{jpWeatherData.current.precipitation} mm</b></div>
+                        <div>風速: <b>{jpWeatherData.current.wind_speed} km/h {jpWeatherData.current.wind_direction_arrow}</b></div>
+                      </div>
+                    </div>
+
+                    {jpWeatherData.hourly && jpWeatherData.hourly.length > 0 && (
+                      <div className="list-card glass" style={{ padding: '12px' }}>
+                        <div className="card-title" style={{ fontSize: '13px', color: 'var(--color-primary)', marginBottom: '8px' }}>
+                          🕒 未來 24 小時每 3 小時預報走勢
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {jpWeatherData.hourly.map((item: any, idx: number) => (
+                            <div key={idx} style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '12px',
+                              padding: '6px 8px',
+                              background: 'rgba(255, 255, 255, 0.01)',
+                              borderRadius: '4px'
+                            }}>
+                              <span style={{ fontWeight: 'bold', minWidth: '45px' }}>{item.time}</span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span>{item.weather_emoji}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>{item.weather_desc}</span>
+                              </span>
+                              <span style={{ minWidth: '55px', textAlign: 'right' }}>
+                                <b>{item.temp}°C</b> <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>({item.pop}%)</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 2. Forecast Submode */}
+                {jpWeatherSubMode === 'forecast' && jpWeatherData.daily && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {jpWeatherData.daily.map((item: any, idx: number) => {
+                      const isHighPop = item.pop >= 50;
+                      return (
+                        <div key={idx} className="list-card glass" style={{ padding: '10px 12px', marginBottom: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                              {item.date} ({item.weekday})
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
+                              <span>{item.weather_emoji}</span>
+                              <b>{item.weather_desc}</b>
+                            </span>
+                          </div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '4px',
+                            fontSize: '11px',
+                            marginTop: '6px',
+                            color: 'var(--text-muted)'
+                          }}>
+                            <div>溫度: <b style={{ color: 'var(--text-primary)' }}>{item.temp_min}~{item.temp_max}°C</b></div>
+                            <div>降雨機率: <b style={{ color: isHighPop ? 'var(--color-danger)' : 'var(--text-primary)' }}>{item.pop}%</b></div>
+                            <div>紫外線: <b>{item.uv_index}</b></div>
+                            <div style={{ gridColumn: 'span 3' }}>
+                              累積降雨: <b>{item.precipitation_sum} mm</b> | 最大風速: <b>{item.wind_speed_max} km/h {item.wind_direction_arrow}</b>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 3. Photography Submode */}
+                {jpWeatherSubMode === 'golden' && jpWeatherData.photography && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {jpWeatherData.photography.polar_status !== 'normal' && (
+                      <div className="error-message" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--color-warning)', padding: '8px', borderRadius: '4px' }}>
+                        ⚠️ 檢測到該區域處於極圈 ({jpWeatherData.photography.polar_status === 'polar_day' ? '極晝 / Midnight Sun' : '極夜 / Polar Night'})。無常規日出日落。
+                      </div>
+                    )}
+                    
+                    {/* Morning Light Card */}
+                    <div className="list-card glass" style={{ padding: '12px' }}>
+                      <div className="card-title" style={{ fontSize: '13px', color: '#38bdf8', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>🌅 晨間光影 Morning Light</span>
+                        <span style={{ color: 'var(--color-warning)' }}>
+                          {'★'.repeat(jpWeatherData.photography.stars_am)}{'☆'.repeat(5 - jpWeatherData.photography.stars_am)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                        <div>晨間藍調 Blue Hour: <b>{jpWeatherData.photography.am.blue_start} - {jpWeatherData.photography.am.blue_end}</b></div>
+                        <div>晨間黃金 Golden Hour: <b>{jpWeatherData.photography.am.golden_start} - {jpWeatherData.photography.am.golden_end}</b></div>
+                        <div>日出時刻 Sunrise: 🌅 <b>{jpWeatherData.photography.am.sunrise}</b></div>
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', color: 'var(--text-secondary)', fontSize: '11px', marginTop: '2px' }}>
+                          💡 攝影指引: {jpWeatherData.photography.desc_am}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Evening Light Card */}
+                    <div className="list-card glass" style={{ padding: '12px' }}>
+                      <div className="card-title" style={{ fontSize: '13px', color: '#f43f5e', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>🌇 傍晚光影 Evening Light</span>
+                        <span style={{ color: 'var(--color-warning)' }}>
+                          {'★'.repeat(jpWeatherData.photography.stars_pm)}{'☆'.repeat(5 - jpWeatherData.photography.stars_pm)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                        <div>日落時刻 Sunset: 🌇 <b>{jpWeatherData.photography.pm.sunset}</b></div>
+                        <div>傍晚黃金 Golden Hour: <b>{jpWeatherData.photography.pm.golden_start} - {jpWeatherData.photography.pm.golden_end}</b></div>
+                        <div>傍晚藍調 Blue Hour: <b>{jpWeatherData.photography.pm.blue_start} - {jpWeatherData.photography.pm.blue_end}</b></div>
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', color: 'var(--text-secondary)', fontSize: '11px', marginTop: '2px' }}>
+                          💡 攝影指引: {jpWeatherData.photography.desc_pm}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

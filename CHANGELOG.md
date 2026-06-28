@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-28
+
+### Added
+- **Japan & Global Weather CLI (`jp-weather`)**: Migrated the standalone `japan-weather` project into `hermes-go`.
+  - **Features**: Supports CJK geographic name matching, GPS decimal & DMS coordinate reverse geocoding, SQLite caching, gold/blue hour camera ratings, compact mobile output layout, and questionary-driven interactive mode.
+  - **Subcommands**: `current`, `forecast`, `golden`, `clean`.
+- **Japan Weather Web Dashboard UI**:
+  - Integrated `jp_weather` into the FastAPI backend at `/api/jpweather/weather` which fetches geocoding, current conditions, 3-hourly trends, 7-day forecast, and photography index parameters in a single payload.
+  - Added a new React dashboard tab **🇯🇵 日本天氣** supporting search queries and map click interactions.
+  - Built interactive tabs for **即時天氣** (Current), **一週預報** (7-day forecast), and **黃金攝影** (golden hour star ratings).
+- **Unit Tests**: Migrated and renamed tests (`test_jp_weather.py`, `test_golden.py`, `test_suncalc.py`, `test_weather_enhancements.py`) and added a new backend integration test (`test_server_jp_weather.py`). Total 75 tests passing.
+
+### Changed
+- **Project Version**: Upgraded package version in `pyproject.toml` to `0.5.0`.
+- **Root README**: Updated the description of `jp-weather` in the root `README.md` to include CLI commands, dashboard instructions, and test targets.
+- **Documentation**: Corrected relative links in `src/jp_weather/README.md` and created renamed developer documentation under `docs/` (`jp_weather_walkthrough.md`, `jp_weather_implementation_plan.md`, `jp_weather_task.md`, `jp_weather_migration.md`).
+
 ## [0.4.0] - 2026-06-27
 
 ### Added

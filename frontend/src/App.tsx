@@ -3,7 +3,7 @@ import './App.css';
 import Sidebar from './components/Sidebar';
 import MapContainer from './components/MapContainer';
 
-type Mode = 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather';
+type Mode = 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather' | 'jpweather';
 
 // Helper to determine the API endpoint based on development vs production mode
 const getApiUrl = (path: string) => {
@@ -49,6 +49,10 @@ export default function App() {
   const [weatherSubMode, setWeatherSubMode] = useState<'rain' | 'check' | 'hourly'>('rain');
   const [weatherData, setWeatherData] = useState<any>(null);
   const [isHourlyAll, setIsHourlyAll] = useState(false);
+
+  // Japan Weather states
+  const [jpWeatherSubMode, setJpWeatherSubMode] = useState<'current' | 'forecast' | 'golden'>('current');
+  const [jpWeatherData, setJpWeatherData] = useState<any>(null);
 
   // 1. Fetch Japan Train areas on initial load
   useEffect(() => {
@@ -140,6 +144,42 @@ export default function App() {
       return;
     }
 
+    if (mode === 'jpweather') {
+      const fetchJpWeather = async () => {
+        setIsLoading(true);
+        setError(null);
+        setJpWeatherData(null);
+        try {
+          const url = `/api/jpweather/weather?location=${lat},${lon}`;
+          const res = await fetch(getApiUrl(url));
+          if (!res.ok) throw new Error(`日本天氣 API 回傳異常 (HTTP ${res.status})`);
+          const json = await res.json();
+          if (json.status === 'success') {
+            setJpWeatherData(json);
+            if (json.coords) {
+              setData([{
+                uid: 'resolved-loc-jp',
+                name: json.location.name,
+                lat: json.coords.lat,
+                lon: json.coords.lon,
+                address: `日本天氣定位點: ${json.location.prefecture || ''}`
+              }]);
+            } else {
+              setData([]);
+            }
+          } else {
+            setError(json.message || '查詢日本天氣時發生錯誤');
+          }
+        } catch (err: any) {
+          setError(err.message || '日本天氣後端連線失敗');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchJpWeather();
+      return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
@@ -208,6 +248,27 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     try {
+      if (mode === 'jpweather') {
+        const res = await fetch(getApiUrl(`/api/jpweather/weather?location=${encodeURIComponent(text)}`));
+        if (!res.ok) throw new Error('無法解析該日本或全球地名');
+        const json = await res.json();
+        if (json.status === 'success') {
+          setLat(json.coords.lat);
+          setLon(json.coords.lon);
+          setJpWeatherData(json);
+          setData([{
+            uid: 'resolved-loc-jp',
+            name: json.location.name,
+            lat: json.coords.lat,
+            lon: json.coords.lon,
+            address: `日本天氣定位點: ${json.location.prefecture || ''}`
+          }]);
+        } else {
+          alert(json.message || '無法解析該日本或全球地名');
+        }
+        return;
+      }
+
       const res = await fetch(getApiUrl('/api/utils/parse-gps'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,8 +281,8 @@ export default function App() {
       } else {
         alert(json.message || '無法解析輸入的經緯度或地址');
       }
-    } catch (err) {
-      alert('連線至後端 API 解析失敗');
+    } catch (err: any) {
+      alert(err.message || '連線至後端 API 解析失敗');
     } finally {
       setIsLoading(false);
     }
@@ -312,6 +373,9 @@ export default function App() {
         weatherData={weatherData}
         isHourlyAll={isHourlyAll}
         setIsHourlyAll={setIsHourlyAll}
+        jpWeatherSubMode={jpWeatherSubMode}
+        setJpWeatherSubMode={setJpWeatherSubMode}
+        jpWeatherData={jpWeatherData}
       />
 
       {/* Main Map View Section */}
@@ -358,6 +422,12 @@ export default function App() {
               onClick={() => setMode('weather')}
             >
               🌦️ 台灣天氣
+            </button>
+            <button
+              className={`tab-btn ${mode === 'jpweather' ? 'active' : ''}`}
+              onClick={() => setMode('jpweather')}
+            >
+              🇯🇵 日本天氣
             </button>
           </div>
         </div>

@@ -22,6 +22,9 @@ from jptrain import api as jptrain_api
 from jptrain.formatter import to_traditional_chinese, get_status_info
 from tw_weather import api as weather_api
 from tw_weather.cache import cache as weather_cache
+from jp_weather import api as jp_weather_api
+from jp_weather.suncalc import get_sun_times as get_jp_sun_times
+from jp_weather.formatter import get_weather_info as get_jp_weather_info, get_weekday_ch as get_jp_weekday_ch, get_wind_direction_arrow as get_jp_wind_direction_arrow
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -702,6 +705,205 @@ def get_weather_rain(
         }
     except Exception as e:
         logger.error(f"Error checking rain observations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/jpweather/weather")
+def get_jp_weather(
+    location: str = Query("東京", description="Location name, zip code, or GPS coordinates")
+):
+    """
+    Get current weather, hourly forecast (next 24h), weekly forecast, and photography index for Japan/global locations.
+    """
+    from datetime import datetime, timezone as dt_timezone
+    from zoneinfo import ZoneInfo
+    
+    try:
+        # Resolve location
+        # 1. Parse GPS first
+        gps_coords = jp_weather_api.parse_gps(location)
+        if gps_coords:
+            lat, lon = gps_coords
+            loc_data = jp_weather_api.reverse_geocode(lat, lon)
+        else:
+            # 2. Text geocoding
+            locations = jp_weather_api.geocode(location)
+            if not locations:
+                raise HTTPException(status_code=400, detail="Could not resolve the specified Japanese or global location.")
+            loc_data = locations[0]
+            
+        lat = loc_data.get("latitude")
+        lon = loc_data.get("longitude")
+        timezone_str = loc_data.get("timezone", "Asia/Tokyo")
+        
+        # Fetch weather data
+        weather_raw = jp_weather_api.get_weather(lat, lon, timezone_str)
+        if not weather_raw:
+            raise HTTPException(status_code=500, detail="Failed to fetch weather data from Open-Meteo API.")
+            
+        # Parse current weather
+        curr = weather_raw.get("current", {})
+        temp = curr.get("temperature_2m")
+        humidity = curr.get("relative_humidity_2m")
+        apparent_temp = curr.get("apparent_temperature")
+        precip = curr.get("precipitation", 0.0)
+        wind_speed = curr.get("wind_speed_10m")
+        wind_dir = curr.get("wind_direction_10m")
+        w_code = curr.get("weather_code", 0)
+        
+        weather_desc, weather_emoji, weather_color = get_jp_weather_info(w_code)
+        wind_arrow = get_jp_wind_direction_arrow(wind_dir)
+        
+        current_formatted = {
+            "temperature": temp,
+            "apparent_temperature": apparent_temp,
+            "humidity": humidity,
+            "precipitation": precip,
+            "wind_speed": wind_speed,
+            "wind_direction": wind_dir,
+            "wind_direction_arrow": wind_arrow,
+            "weather_code": w_code,
+            "weather_desc": weather_desc,
+            "weather_emoji": weather_emoji,
+            "weather_color": weather_color,
+            "time": curr.get("time", "")
+        }
+        
+        # Parse hourly trend (next 24h, step 3)
+        hourly_raw = weather_raw.get("hourly", {})
+        h_times = hourly_raw.get("time", [])
+        h_temps = hourly_raw.get("temperature_2m", [])
+        h_pops = hourly_raw.get("precipitation_probability", [])
+        h_codes = hourly_raw.get("weather_code", [])
+        
+        hourly_list = []
+        for i in range(0, min(24, len(h_times)), 3):
+            if i < len(h_times):
+                h_code = h_codes[i] if i < len(h_codes) else 0
+                h_desc, h_emoji, h_color = get_jp_weather_info(h_code)
+                t_str = h_times[i].split("T")[1] if "T" in h_times[i] else h_times[i]
+                hourly_list.append({
+                    "time": t_str,
+                    "temp": h_temps[i] if i < len(h_temps) else None,
+                    "pop": h_pops[i] if i < len(h_pops) else 0,
+                    "weather_desc": h_desc,
+                    "weather_emoji": h_emoji,
+                    "weather_color": h_color
+                })
+                
+        # Parse daily forecast (7 days)
+        daily_raw = weather_raw.get("daily", {})
+        d_times = daily_raw.get("time", [])
+        d_codes = daily_raw.get("weather_code", [])
+        d_maxs = daily_raw.get("temperature_2m_max", [])
+        d_mins = daily_raw.get("temperature_2m_min", [])
+        d_precips = daily_raw.get("precipitation_sum", [])
+        d_pops = daily_raw.get("precipitation_probability_max", [])
+        d_winds = daily_raw.get("wind_speed_10m_max", [])
+        d_uvs = daily_raw.get("uv_index_max", [])
+        
+        daily_list = []
+        for i in range(len(d_times)):
+            d_code = d_codes[i] if i < len(d_codes) else 0
+            d_desc, d_emoji, d_color = get_jp_weather_info(d_code)
+            date_val = d_times[i]
+            formatted_date = date_val[5:] if len(date_val) >= 10 else date_val
+            weekday_ch = get_jp_weekday_ch(date_val)
+            
+            daily_list.append({
+                "date": formatted_date,
+                "weekday": weekday_ch,
+                "temp_max": d_maxs[i] if i < len(d_maxs) else None,
+                "temp_min": d_mins[i] if i < len(d_mins) else None,
+                "pop": d_pops[i] if i < len(d_pops) else 0,
+                "precipitation_sum": d_precips[i] if i < len(d_precips) else 0.0,
+                "wind_speed_max": d_winds[i] if i < len(d_winds) else 0.0,
+                "uv_index": d_uvs[i] if i < len(d_uvs) else 0.0,
+                "weather_desc": d_desc,
+                "weather_emoji": d_emoji,
+                "weather_color": d_color
+            })
+            
+        # Parse photography/sun times
+        try:
+            tz_info = ZoneInfo(timezone_str)
+        except Exception:
+            tz_info = dt_timezone.utc
+            
+        now_dt = datetime.now(tz_info)
+        sun_times = get_jp_sun_times(lat, lon, now_dt)
+        polar_status = sun_times.get("polar_status", "normal")
+        
+        stars_am, desc_am = 3, "無資料"
+        stars_pm, desc_pm = 3, "無資料"
+        
+        if polar_status == "normal" and hourly_raw:
+            try:
+                stars_am, desc_am = jp_weather_api.calculate_photography_rating(
+                    sun_times.get("blue_hour_am_start"),
+                    sun_times.get("golden_hour_am_end"),
+                    hourly_raw,
+                    timezone_str
+                )
+                stars_pm, desc_pm = jp_weather_api.calculate_photography_rating(
+                    sun_times.get("golden_hour_pm_start"),
+                    sun_times.get("blue_hour_pm_end"),
+                    hourly_raw,
+                    timezone_str
+                )
+            except Exception:
+                pass
+                
+        def format_time_helper(dt):
+            if not dt:
+                return "--:--"
+            if dt.tzinfo is None:
+                return dt.strftime("%H:%M")
+            return dt.astimezone(tz_info).strftime("%H:%M")
+            
+        photo_data = {
+            "polar_status": polar_status,
+            "stars_am": stars_am,
+            "desc_am": desc_am,
+            "stars_pm": stars_pm,
+            "desc_pm": desc_pm,
+            "am": {
+                "blue_start": format_time_helper(sun_times.get("blue_hour_am_start")),
+                "blue_end": format_time_helper(sun_times.get("blue_hour_am_end")),
+                "golden_start": format_time_helper(sun_times.get("golden_hour_am_start")),
+                "golden_end": format_time_helper(sun_times.get("golden_hour_am_end")),
+                "sunrise": format_time_helper(sun_times.get("sunrise"))
+            },
+            "pm": {
+                "sunset": format_time_helper(sun_times.get("sunset")),
+                "golden_start": format_time_helper(sun_times.get("golden_hour_pm_start")),
+                "golden_end": format_time_helper(sun_times.get("golden_hour_pm_end")),
+                "blue_start": format_time_helper(sun_times.get("blue_hour_pm_start")),
+                "blue_end": format_time_helper(sun_times.get("blue_hour_pm_end"))
+            }
+        }
+        
+        return {
+            "status": "success",
+            "location": {
+                "name": loc_data.get("name"),
+                "prefecture": loc_data.get("admin1"),
+                "country": loc_data.get("country"),
+                "country_code": loc_data.get("country_code"),
+                "lat": lat,
+                "lon": lon,
+                "timezone": timezone_str
+            },
+            "coords": {"lat": lat, "lon": lon},
+            "current": current_formatted,
+            "hourly": hourly_list,
+            "daily": daily_list,
+            "photography": photo_data
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error checking Japan weather: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

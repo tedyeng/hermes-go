@@ -6,7 +6,7 @@ interface MapContainerProps {
   lat: number;
   lon: number;
   onMapClick: (lat: number, lon: number) => void;
-  mode: 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather';
+  mode: 'ubike' | 'twbus' | 'places' | 'jptrain' | 'weather' | 'jpweather';
   data: any[];
   selectedItem: any;
   onSelectItem: (item: any) => void;
@@ -162,7 +162,7 @@ export default function MapContainer({
             <div style="color: #f59e0b; font-weight:bold;">★ ${item.rating || '無評分'} (${item.user_ratings_total || 0})</div>
           </div>
         `;
-      } else if (mode === 'weather') {
+      } else if (mode === 'weather' || mode === 'jpweather') {
         itemLat = item.lat;
         itemLon = item.lon;
         markerColor = '#06b6d4'; // Cyan for weather pins
